@@ -8,6 +8,14 @@ from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 from tqdm import tqdm
 
+class Config:
+    train_size = 1000
+    test_size = 400
+    epochs = 3
+    learning_rate = 2e-5
+
+conf = Config()
+
 print("Loading 20newsgroups dataset")
 dataset = fetch_20newsgroups(subset="all", shuffle=True, remove=("headers", "footers", "quotes"))
 documents = dataset.data
@@ -59,8 +67,8 @@ class NewsGroupDataset(Dataset):
             'label': torch.tensor(label, dtype=torch.long)
         }
 
-train_dataset = NewsGroupDataset(train_texts[:1000], train_labels[:1000], tokenizer)
-test_dataset = NewsGroupDataset(test_texts[:200], test_labels[:200], tokenizer)
+train_dataset = NewsGroupDataset(train_texts[:conf.train_size], train_labels[:conf.train_size], tokenizer)
+test_dataset = NewsGroupDataset(test_texts[:conf.test_size], test_labels[:conf.test_size], tokenizer)
 
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
@@ -69,11 +77,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 model.to(device)
 
-epochs = 2
-learning_rate = 2e-5
-
-optimizer = AdamW(model.parameters(), lr=learning_rate)
-total_steps = len(train_loader) * epochs
+optimizer = AdamW(model.parameters(), lr=conf.learning_rate)
+total_steps = len(train_loader) * conf.epochs
 scheduler = get_linear_schedule_with_warmup(
     optimizer,
     num_warmup_steps=0,
@@ -136,8 +141,8 @@ def eval_model(model, data_loader, device):
     return predictions, true_labels
 
 print("\nTraining BERT Model")
-for epoch in range(epochs):
-    print(f"\nEpoch {epoch + 1}/{epochs}")
+for epoch in range(conf.epochs):
+    print(f"\nEpoch {epoch + 1}/{conf.epochs}")
     train_acc, train_loss = train_epoch(model, train_loader, optimizer, scheduler, device)
     print(f"Train loss: {train_loss:.4f}, Train accuracy: {train_acc:.4f}")
 
@@ -147,7 +152,7 @@ predictions, true_labels = eval_model(model, test_loader, device)
 test_accuracy = accuracy_score(true_labels, predictions)
 print(f"\nTest Accuracy: {test_accuracy:.4f}")
 print("\nClassification Report:")
-print(classification_report(true_labels, predictions, target_names=[dataset.target_names[i] for i in sorted(set(test_labels[:200]))]))
+print(classification_report(true_labels, predictions, target_names=[dataset.target_names[i] for i in sorted(set(test_labels[:conf.test_size]))]))
 
 model.save_pretrained('./bert_20newsgroups_model')
 tokenizer.save_pretrained('./bert_20newsgroups_model')

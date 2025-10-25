@@ -1,1 +1,4 @@
 /.idea
+/sbert_20newsgroups_model/
+/checkpoints/
+/bert_20newsgroups_model/
